@@ -35,13 +35,37 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
     # plt.show()
 
     # Downsample ewe and time to give a reading every hour
-    ewe_hourly = ewe[::3600]
-    time_hourly = time[::3600]
-    capacity_hourly = capacity[::3600]
-    time_hourly = time_hourly/3600
-    time_hourly = time_hourly.round()
+    # ewe_hourly = ewe[::3600]
+    # time_hourly = time[::3600]
+    # capacity_hourly = capacity[::3600]
+    # time_hourly = time_hourly/3600
+    # time_hourly = time_hourly.round()
 
-    
+    # Attempt to be more precise when downsampling hours (see ipynb notebook for more details)
+    time_hourly2 = []
+    ewe_hourly2 = []
+    capacity_hourly2 = []
+    for ind, t in enumerate(time):
+        if time[ind] == len(time_hourly2)*3600:
+            time_hourly2.append(t/3600)
+            ewe_hourly2.append(ewe[ind])
+            capacity_hourly2.append(capacity[ind])
+        elif time[ind] > len(time_hourly2)*3600:
+            time_hourly2.append(time[ind-1]/3600)
+            ewe_hourly2.append(ewe[ind-1])
+            capacity_hourly2.append(capacity[ind-1])
+
+    # assuming that it ends right before the last hour, let's add that ponit as well. (it shouldn't hurt it we overcount an hour anyways because our loop breaks at the manually indicated end hour)
+    time_hourly2.append(time[-1]/3600)
+    ewe_hourly2.append(ewe[-1])
+    capacity_hourly2.append(capacity[-1])
+
+    time_hourly = np.array(time_hourly2).round()
+    ewe_hourly = np.array(ewe_hourly2)
+    capacity_hourly = np.array(capacity_hourly2)
+
+
+
     # Create a pandas dataframe that will outputted to a csv with the following headers:
     # Time (h)	Peak  potential	Temperature	OCV	dE/dT	dS	Capacity (mAh)	Capacity corresponding to peak  potential (mAh/g)
 
@@ -84,10 +108,10 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
 
         # ignore hour 2 (we read only after the seconf 45C hour) for charge
         # for discharge ignore hour 6 (right now, can try adding a reading of 45c then as well)
-        elif (t<175 and cycle_time_h >=2 and cycle_time_h <= 6) or (t>175 and cycle_time_h >=1 and cycle_time_h<=5): # or cycle_time_h == 0:
+        elif (t<middle_transition_hour and cycle_time_h >=2 and cycle_time_h <= 6) or (t>middle_transition_hour and cycle_time_h >=1 and cycle_time_h<=5): # or cycle_time_h == 0:
             times.append(' ')
             peak_potential.append(' ')
-            if t<175:
+            if t<middle_transition_hour:
                 temp.append(cycle_temps[cycle_time_h-2])
             else:
                 temp.append(cycle_temps[cycle_time_h-1])
@@ -269,11 +293,11 @@ if __name__ == '__main__':
         },
         # 50 LMRD cycle 2
         {
-            "path": None,
+            "path": "data_files\IK_50LMRD_cyc2_entropy\IK_50LMRD_entropy_cyc2_2_C01_cropped.mpt",
             "name": "50LMRD_cycle2",
-            "start_hour": None,
-            "middle_transition_hour": None,
-            "end_hour": None,
+            "start_hour": 3,
+            "middle_transition_hour": 108,
+            "end_hour": 207,
             "mass": 0.0121884,
             "theoretical_capacity": 378
         }
@@ -284,5 +308,5 @@ if __name__ == '__main__':
             print(f"Unfinished params, skipping {params['name']}")
             continue
         print(f"Running analysis for {params['name']}")
-        run_analysis(**params, overwrite=True)
+        run_analysis(**params, overwrite=False)
         print()
