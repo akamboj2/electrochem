@@ -3,9 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass, theoretical_capacity, overwrite=False):
+def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass, theoretical_capacity, overwrite=False, temp6_discharge=False):
     # Read data
-    output_path = os.path.join("out_files",name)
+    if temp6_discharge:
+        output_path = os.path.join("out_files_temp6_discharge",name)
+    else:
+        output_path = os.path.join("out_files",name)
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     else:
@@ -82,6 +85,8 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
     dS = []
     capacity_peak_pot = []
     cycle_temps = [45, 35, 25, 15, 5]
+    cycle_temps6 = [45, 35, 25, 15, 5, 45]
+
 
     for v, t, c in zip(ewe_hourly, time_hourly, capacity_hourly):
         if t < start_hour or t==middle_transition_hour: 
@@ -126,11 +131,25 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
 
         #find slope of line of best fit of the five points
         if cycle_time_h == 6:
-            # print("OCV: ", OCV[-5:])
-            # print("cycle temps", cycle_temps)
-            m, b = np.polyfit(cycle_temps, OCV[-5:], 1)
-            dE_dT[-6] = m
-            dS[-6] = m*96500
+            if temp6_discharge and t>middle_transition_hour:
+                times.append(' ')
+                peak_potential.append(' ')
+                dE_dT.append(' ')
+                dS.append(' ')
+                capacity_peak_pot.append(' ')
+                OCV.append(ewe[indices_hourly[int(t)]-1])
+                temp.append(45)
+                # print("OCV: ", OCV[-6:])
+                # print("cycle temps", cycle_temps6)
+                m, b = np.polyfit(cycle_temps6, OCV[-6:], 1)
+                dE_dT[-7] = m
+                dS[-7] = m*96500
+            else:
+                # print("OCV: ", OCV[-5:])
+                # print("cycle temps", cycle_temps)
+                m, b = np.polyfit(cycle_temps, OCV[-5:], 1)
+                dE_dT[-6] = m
+                dS[-6] = m*96500
 
     condensed_times = [int(x) for x in times if x != ' ']
     condensed_peak_pot = [float(x) for x in peak_potential if x != ' ']
@@ -312,5 +331,5 @@ if __name__ == '__main__':
             print(f"Unfinished params, skipping {params['name']}")
             continue
         print(f"Running analysis for {params['name']}")
-        run_analysis(**params, overwrite=True)
+        run_analysis(**params, overwrite=True, temp6_discharge=True)
         print()
