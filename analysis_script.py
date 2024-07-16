@@ -45,15 +45,18 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
     time_hourly2 = []
     ewe_hourly2 = []
     capacity_hourly2 = []
+    indices_hourly = []
     for ind, t in enumerate(time):
         if time[ind] == len(time_hourly2)*3600:
             time_hourly2.append(t/3600)
             ewe_hourly2.append(ewe[ind])
             capacity_hourly2.append(capacity[ind])
+            indices_hourly.append(ind)
         elif time[ind] > len(time_hourly2)*3600:
             time_hourly2.append(time[ind-1]/3600)
             ewe_hourly2.append(ewe[ind-1])
             capacity_hourly2.append(capacity[ind-1])
+            indices_hourly.append(ind-1)
 
     # assuming that it ends right before the last hour, let's add that ponit as well. (it shouldn't hurt it we overcount an hour anyways because our loop breaks at the manually indicated end hour)
     time_hourly2.append(time[-1]/3600)
@@ -63,6 +66,7 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
     time_hourly = np.array(time_hourly2).round()
     ewe_hourly = np.array(ewe_hourly2)
     capacity_hourly = np.array(capacity_hourly2)
+    indices_hourly = np.array(indices_hourly)
 
 
 
@@ -115,7 +119,7 @@ def run_analysis(path, name, start_hour, middle_transition_hour, end_hour, mass,
                 temp.append(cycle_temps[cycle_time_h-2])
             else:
                 temp.append(cycle_temps[cycle_time_h-1])
-            OCV.append(ewe[int(t)*3600-1])
+            OCV.append(ewe[indices_hourly[int(t)]-1])
             dE_dT.append(' ')
             dS.append(' ')
             capacity_peak_pot.append(' ')
@@ -308,5 +312,5 @@ if __name__ == '__main__':
             print(f"Unfinished params, skipping {params['name']}")
             continue
         print(f"Running analysis for {params['name']}")
-        run_analysis(**params, overwrite=False)
+        run_analysis(**params, overwrite=True)
         print()
